@@ -1,0 +1,5 @@
+rules:
+  - url_pattern: "^https?://example\\.com/.*"
+    action: "block"
+  - url_pattern: "^https?://modify\\.example\\.com/.*"
+    action: "modify"
