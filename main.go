@@ -7,11 +7,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"nexum/config"
+	"nexum/rules"
 )
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Received request %s %s", r.Method, r.URL.String())
-	rule := config.MatchRule(r.URL.String())
+	rule := rules.MatchRule(config.GetRules(), r.URL.String())
 	if rule != nil {
 		switch rule.Action {
 		case "block":
@@ -19,10 +20,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 			log.Infof("Blocked request %s based on rule", r.URL.String())
 			return
 		case "modify":
-			// TODO: Implement modification logic
+			rules.ApplyModifications(r, rule.Modifications)
 			log.Infof("Modified request %s based on rule", r.URL.String())
 		}
 	}
+
 	resp, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
 		http.Error(w, "Error forwarding request: "+err.Error(), http.StatusServiceUnavailable)

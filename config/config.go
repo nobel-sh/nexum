@@ -2,19 +2,13 @@ package config
 
 import (
 	"os"
-	"regexp"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"nexum/rules"
 )
 
-type Rule struct {
-	URLPattern string `yaml:"url_pattern"`
-	Action     string `yaml:"action"` // "allow", "block", or "modify"
-}
-
 type Config struct {
-	Rules []Rule `yaml:"rules"`
+	Rules []rules.Rule `yaml:"rules"`
 }
 
 var config Config
@@ -31,16 +25,6 @@ func LoadConfig(filename string) error {
 	return nil
 }
 
-func MatchRule(url string) *Rule {
-	for _, rule := range config.Rules {
-		matched, err := regexp.MatchString(rule.URLPattern, url)
-		if err != nil {
-			log.Errorf("Error matching rule: %v", err)
-			continue
-		}
-		if matched {
-			return &rule
-		}
-	}
-	return nil
+func GetRules() []rules.Rule {
+	return config.Rules
 }
