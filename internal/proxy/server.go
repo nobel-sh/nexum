@@ -22,9 +22,10 @@ func NewServer(cfg *config.Config, log *logger.Logger) *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// if REQUEST method is found create a TCP tunnel between them
 	if r.Method == http.MethodConnect {
-		s.handler.HandleHTTPS(w, r)
+		s.handler.HandleConnectTunnel(w, r)
 	} else {
-		s.handler.HandleHTTP(w, r)
+		s.handler.HandleHTTPRequests(w, r)
 	}
 }
