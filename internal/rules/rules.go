@@ -1,10 +1,8 @@
-package proxy
+package rules
 
 import (
 	"net/http"
 	"regexp"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Modification struct {
@@ -23,7 +21,6 @@ func MatchRule(rules []Rule, url string) *Rule {
 	for _, rule := range rules {
 		matched, err := regexp.MatchString("^"+rule.URLPattern, url)
 		if err != nil {
-			log.Errorf("Error matching rule: %v", err)
 			continue
 		}
 		if matched {
