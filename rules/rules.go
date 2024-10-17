@@ -8,20 +8,20 @@ import (
 )
 
 type Modification struct {
-	Type  string
-	Key   string
-	Value string
+	Type  string `yaml:"type"`
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
 }
 
 type Rule struct {
-	URLPattern    string
-	Action        string
-	Modifications []Modification
+	URLPattern    string         `yaml:"url_pattern"`
+	Action        string         `yaml:"action"`
+	Modifications []Modification `yaml:"modifications"`
 }
 
 func MatchRule(rules []Rule, url string) *Rule {
 	for _, rule := range rules {
-		matched, err := regexp.MatchString(rule.URLPattern, url)
+		matched, err := regexp.MatchString("^"+rule.URLPattern, url)
 		if err != nil {
 			log.Errorf("Error matching rule: %v", err)
 			continue

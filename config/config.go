@@ -18,10 +18,12 @@ func LoadConfig(filename string) error {
 	if err != nil {
 		return err
 	}
+
 	err = yaml.Unmarshal(file, &config)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

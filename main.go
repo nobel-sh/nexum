@@ -22,7 +22,11 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		case "modify":
 			rules.ApplyModifications(r, rule.Modifications)
 			log.Infof("Modified request %s based on rule", r.URL.String())
+		case "allow":
+			log.Infof("Allowed request %s based on rule", r.URL.String())
 		}
+	} else {
+		log.Infof("No matching rule found for %s, forwarding request", r.URL.String())
 	}
 
 	resp, err := http.DefaultTransport.RoundTrip(r)
@@ -60,6 +64,7 @@ func main() {
 	if err := config.LoadConfig("config.yaml"); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+
 	listenAddr := ":8080"
 	log.Infof("Starting proxy server on %s...", listenAddr)
 	if err := http.ListenAndServe(listenAddr, http.HandlerFunc(handleRequest)); err != nil {
