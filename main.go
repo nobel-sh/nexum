@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -59,13 +60,23 @@ func copyHeader(dst, src http.Header) {
 	}
 }
 
+var (
+	configFile string
+	listenAddr string
+)
+
+func init() {
+	flag.StringVar(&configFile, "config", "config.yaml", "Path to configuration file")
+	flag.StringVar(&listenAddr, "listen", ":8080", "Address to listen on")
+}
+
 func main() {
+	flag.Parse()
 	InitLogger()
-	if err := config.LoadConfig("config.yaml"); err != nil {
+	if err := config.LoadConfig(configFile); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	listenAddr := ":8080"
 	log.Infof("Starting proxy server on %s...", listenAddr)
 	if err := http.ListenAndServe(listenAddr, http.HandlerFunc(handleRequest)); err != nil {
 		log.Errorf("Failed to start server: %v", err)
