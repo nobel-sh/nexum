@@ -1,6 +1,6 @@
 rules:
-  - url_pattern: "^https?://example\\.com/.*"
-    action: "block"
+  # - url_pattern: "^https?://example\\.com/.*"
+  #   action: "block"
   - url_pattern: "^https?://example\\.edu/.*"
     action: "modify"
     modifications:

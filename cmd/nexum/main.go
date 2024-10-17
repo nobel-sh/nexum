@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-
+	"net/http"
 	"nexum/internal/config"
 	"nexum/internal/logger"
 	"nexum/internal/proxy"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -26,8 +31,30 @@ func main() {
 	}
 
 	server := proxy.NewServer(cfg, logger)
-	logger.Info("Starting proxy server on %s", *listenAddr)
-	if err := server.ListenAndServe(*listenAddr); err != nil {
-		logger.Fatal("Failed to start server: %v", err)
+
+	httpServer := &http.Server{
+		Addr:    *listenAddr,
+		Handler: server,
 	}
+
+	go func() {
+		logger.Info("Starting proxy server on %s", *listenAddr)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start server: %v", err)
+		}
+	}()
+
+	// gracefully shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		logger.Fatal("Server forced to shutdown: %v", err)
+	}
+
+	logger.Info("Server exiting")
 }

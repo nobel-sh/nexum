@@ -2,31 +2,30 @@ package proxy
 
 import (
 	"io"
+	"net"
 	"net/http"
-	"time"
-
 	"nexum/internal/config"
 	"nexum/internal/logger"
 	"nexum/internal/rules"
 	"nexum/pkg/httputil"
+	"time"
 )
 
-type handler struct {
+type Handler struct {
 	config *config.Config
 	logger *logger.Logger
 }
 
-func newHandler(cfg *config.Config, log *logger.Logger) *handler {
-	return &handler{
+func NewHandler(cfg *config.Config, log *logger.Logger) *Handler {
+	return &Handler{
 		config: cfg,
 		logger: log,
 	}
 }
 
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-
-	h.logger.Info("Received request %s %s from %s", r.Method, r.URL.String(), r.RemoteAddr)
+	h.logger.Info("Received HTTP request %s %s from %s", r.Method, r.URL.String(), r.RemoteAddr)
 
 	rule := rules.MatchRule(h.config.Rules, r.URL.String())
 	if rule != nil {
@@ -56,10 +55,54 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Forwarded request to %s with status %d", r.URL.String(), resp.StatusCode)
 	httputil.CopyHeader(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	if _, err := io.Copy(w, resp.Body); err != nil {
-		h.logger.Error("Failed to copy response body: %v", err)
-	}
+	io.Copy(w, resp.Body)
 
 	duration := time.Since(startTime)
-	h.logger.Info("Request processed in %v", duration)
+	h.logger.Info("HTTP request processed in %v", duration)
+}
+
+func (h *Handler) HandleHTTPS(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	h.logger.Info("Received HTTPS CONNECT request for %s from %s", r.Host, r.RemoteAddr)
+
+	targetConn, err := net.DialTimeout("tcp", r.Host, 10*time.Second)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		h.logger.Error("Failed to connect to %s: %v", r.Host, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
+		h.logger.Error("Hijacking not supported")
+		return
+	}
+
+	clientConn, _, err := hijacker.Hijack()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		h.logger.Error("Hijacking failed: %v", err)
+		return
+	}
+
+	h.logger.Info("HTTPS connection established between %s and %s", r.RemoteAddr, r.Host)
+
+	go h.transfer(targetConn, clientConn)
+	go h.transfer(clientConn, targetConn)
+
+	duration := time.Since(startTime)
+	h.logger.Info("HTTPS CONNECT request processed in %v", duration)
+}
+
+func (h *Handler) transfer(destination io.WriteCloser, source io.ReadCloser) {
+	_, err := io.Copy(destination, source)
+	destination.Close()
+	source.Close()
+
+	if err != nil {
+		h.logger.Error("Error during data transfer: %v", err)
+	}
 }
