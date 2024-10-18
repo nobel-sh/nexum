@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 	// "nexum/internal/config"
 	"nexum/internal/logger"
 	"nexum/internal/rules"
@@ -54,9 +55,21 @@ func (h *Handler) HandleConnectTunnel(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info("Connection established between %s and %s", r.RemoteAddr, r.Host)
 
-	// Transfer in both directions.
-	go h.transferData(targetConn, clientConn)
-	go h.transferData(clientConn, targetConn)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	copyConn := func(dst io.Writer, src io.Reader) {
+		defer wg.Done()
+		_, err := io.Copy(dst, src)
+		if err != nil && !isClosedConnError(err) {
+			h.logger.Error("Error during data transfer: %v", err)
+		}
+	}
+
+	go copyConn(targetConn, clientConn)
+	go copyConn(clientConn, targetConn)
+
+	wg.Wait()
 
 	duration := time.Since(startTime)
 	h.logger.Info("CONNECT request processed in %v", duration)
@@ -101,12 +114,23 @@ func (h *Handler) HandleHTTPRequests(w http.ResponseWriter, r *http.Request) {
 
 // transfers data between two TCP connections and closing them
 // once complete
-func (h *Handler) transferData(destination io.WriteCloser, source io.ReadCloser) {
-	_, err := io.Copy(destination, source)
-	destination.Close()
-	source.Close()
+// func (h *Handler) transferData(destination io.WriteCloser, source io.ReadCloser) {
+// 	_, err := io.Copy(destination, source)
+// 	destination.Close()
+// 	source.Close()
 
-	if err != nil {
-		h.logger.Error("Error during data transfer: %v", err)
+// 	if err != nil {
+// 		h.logger.Error("Error during data transfer: %v", err)
+// 	}
+// }
+
+func isClosedConnError(err error) bool {
+	if err == io.EOF {
+		return true
 	}
+	if opErr, ok := err.(*net.OpError); ok {
+		// TODO: look into this better
+		return opErr.Err.Error() == "use of closed network connection"
+	}
+	return false
 }
