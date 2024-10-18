@@ -4,7 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"nexum/internal/config"
+	// "nexum/internal/config"
 	"nexum/internal/logger"
 	"nexum/internal/rules"
 	"nexum/pkg/httputil"
@@ -12,13 +12,13 @@ import (
 )
 
 type Handler struct {
-	config *config.Config
+	rules  *rules.RuleList
 	logger *logger.Logger
 }
 
-func NewHandler(cfg *config.Config, log *logger.Logger) *Handler {
+func NewHandler(rules *rules.RuleList, log *logger.Logger) *Handler {
 	return &Handler{
-		config: cfg,
+		rules:  rules,
 		logger: log,
 	}
 }
@@ -67,7 +67,7 @@ func (h *Handler) HandleHTTPRequests(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	h.logger.Info("Received HTTP request %s %s from %s", r.Method, r.URL.String(), r.RemoteAddr)
 
-	rule := rules.MatchRule(h.config.Rules, r.URL.String())
+	rule := rules.MatchRule(*h.rules, r.URL.String())
 	if rule != nil {
 		switch rule.Action {
 		case "block":

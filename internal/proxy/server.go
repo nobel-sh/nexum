@@ -2,22 +2,24 @@ package proxy
 
 import (
 	"net/http"
-	"nexum/internal/config"
+	// "nexum/internal/config"
 	"nexum/internal/logger"
+	"nexum/internal/rules"
 )
 
 type Server struct {
-	config  *config.Config
+	// config  *config.Config
 	logger  *logger.Logger
 	handler *Handler
+	rules   *rules.RuleList
 }
 
-func NewServer(cfg *config.Config, log *logger.Logger) *Server {
+func NewServer(rules *rules.RuleList, logger *logger.Logger) *Server {
 	server := &Server{
-		config: cfg,
-		logger: log,
+		rules:  rules,
+		logger: logger,
 	}
-	server.handler = NewHandler(cfg, log)
+	server.handler = NewHandler(rules, logger)
 	return server
 }
 

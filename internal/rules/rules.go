@@ -1,8 +1,8 @@
 package rules
 
 import (
-	"net/http"
-	"regexp"
+	"gopkg.in/yaml.v2"
+	"os"
 )
 
 type Modification struct {
@@ -12,33 +12,27 @@ type Modification struct {
 }
 
 type Rule struct {
-	URLPattern    string         `yaml:"url_pattern"`
-	Action        string         `yaml:"action"`
-	Modifications []Modification `yaml:"modifications"`
+	URLPattern    string                 `yaml:"url_pattern"`
+	Action        string                 `yaml:"action"`
+	Modifications []Modification         `yaml:"modifications,omitempty"`
+	ActionValue   map[string]interface{} `yaml:"action_value,omitempty"`
 }
 
-func MatchRule(rules []Rule, url string) *Rule {
-	for _, rule := range rules {
-		matched, err := regexp.MatchString("^"+rule.URLPattern, url)
-		if err != nil {
-			continue
-		}
-		if matched {
-			return &rule
-		}
-	}
-	return nil
+type RuleList struct {
+	Rules []Rule `yaml:"rules"`
 }
 
-func ApplyModifications(r *http.Request, mods []Modification) {
-	for _, mod := range mods {
-		switch mod.Type {
-		case "add_header":
-			r.Header.Add(mod.Key, mod.Value)
-		case "remove_header":
-			r.Header.Del(mod.Key)
-		case "set_header":
-			r.Header.Set(mod.Key, mod.Value)
-		}
+func LoadRules(filename string) (*RuleList, error) {
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
 	}
+
+	var rulesCfg RuleList
+	err = yaml.Unmarshal(file, &rulesCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rulesCfg, nil
 }

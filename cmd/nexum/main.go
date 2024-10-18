@@ -8,6 +8,7 @@ import (
 	"nexum/internal/config"
 	"nexum/internal/logger"
 	"nexum/internal/proxy"
+	"nexum/internal/rules"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,29 +17,33 @@ import (
 
 func main() {
 	configFile := flag.String("config", "config.yaml", "Path to configuration file")
-	listenAddr := flag.String("listen", ":8080", "Address to listen on")
-	logFile := flag.String("log", "proxy.log", "Path to log file")
+	rulesFile := flag.String("rules", "rules.yaml", "Path to configuration file")
 	flag.Parse()
 
-	cfg, err := config.Load(*configFile)
+	serverCfg, err := config.LoadConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	logger, err := logger.New(*logFile)
+	rulesCfg, err := rules.LoadRules(*rulesFile)
+	if err != nil {
+		log.Fatalf("Failed to load rules: %v", err)
+	}
+
+	logger, err := logger.New(serverCfg.LogFile)
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
-	server := proxy.NewServer(cfg, logger)
+	server := proxy.NewServer(rulesCfg, logger)
 
 	httpServer := &http.Server{
-		Addr:    *listenAddr,
+		Addr:    serverCfg.ListenAddr,
 		Handler: server,
 	}
 
 	go func() {
-		logger.Info("Starting proxy server on %s", *listenAddr)
+		logger.Info("Starting proxy server on %s", serverCfg.ListenAddr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server: %v", err)
 		}

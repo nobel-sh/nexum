@@ -1,16 +1,2 @@
-rules:
-  # - url_pattern: "^https?://example\\.com/.*"
-  #   action: "block"
-  - url_pattern: "^https?://example\\.edu/.*"
-    action: "modify"
-    modifications:
-      - type: "add_header"
-        key: "X-Custom-Header"
-        value: "CustomValue"
-      - type: "remove_header"
-        key: "Referer"
-      - type: "set_header"
-        key: "User-Agent"
-        value: "CustomUserAgent"
-  - url_pattern: ".*"
-    action: "allow"
+log_file: "proxy.log"
+listen_addr: ":8080"

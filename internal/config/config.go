@@ -1,17 +1,17 @@
 package config
 
 import (
-	"nexum/internal/rules"
-	"os"
-
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
+// server configuration.
 type Config struct {
-	Rules []rules.Rule `yaml:"rules"`
+	LogFile    string `yaml:"log_file"`
+	ListenAddr string `yaml:"listen_addr"`
 }
 
-func Load(filename string) (*Config, error) {
+func LoadConfig(filename string) (*Config, error) {
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
